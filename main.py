@@ -21,6 +21,7 @@ from menu import MainMenu_ui
 from team_add import Team_add_ui
 from group_divide import Group_divide_ui
 from participant_list import Participant_list_ui
+from divided_view import Divided_view_ui
 
 global header
 header = ['Numer', 'Imie', 'Nazwisko', 'Druzyna']
@@ -109,24 +110,34 @@ class Participant_add(QtGui.QWidget):
         root = ET.Element("mainconfig")
         doc = ET.SubElement(root, "configdata")
 
-        model = MyTableModel(tabledata, header, self)
+        #model = MyTableModel(tabledata, header, self)
+        model = ex3.ui3.tableView.model()
         # data = []
         rowcount = model.rowCount(None)
         for row in range(rowcount):
             # data.append([])
 
-            index = model.index(row, 1)
+            index = model.index(row, 2)
             # We suppose data are strings
             # data[row].append(str(model.data(index).toString()))
-            ET.SubElement(doc, "gpio_name_" + str(row), name="" + str(row)).text = str(model.data(index, None).toString())
+            ET.SubElement(doc, "gpio_name_" + str(row), name="" + str(row) + str(model.data( index, None)))
 
         tree = ET.ElementTree(root)
         tree.write("participants.xml")
+
 class Team_add(QtGui.QWidget):
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
         self.ui6 = Team_add_ui()
         self.ui6.setupUi(self)
+
+class Divided_view(QtGui.QWidget):
+    def __init__(self, parent=None):
+        QtGui.QWidget.__init__(self, parent)
+        self.ui8 = Divided_view_ui()
+        self.ui8.setupUi(self)
+
+
 
 class Participant_list(QtGui.QWidget):
     def __init__(self, parent=None):
@@ -195,7 +206,7 @@ class Group_divide(QtGui.QWidget):
         # table.model().layoutChanged.emit()
         tablemodel = MyTableModel(tabledata, header, self)
         rowcount = int(tablemodel.rowCount(None))
-
+        tvmodel = tv.model()
         nums = [x+1 for x in range(rowcount)]
         random.shuffle(nums)
 
@@ -203,18 +214,6 @@ class Group_divide(QtGui.QWidget):
 
         #iterating list
 
-        groups_to_create = int(self.ui.lineEdit.text())
-        participants_in_group = int(self.ui.lineEdit_2.text())
-        divider = 0
-        group = 1
-        for i, val in enumerate(nums):
-
-            if divider == participants_in_group :
-                divider = 0
-                group = group + 1
-            divider = divider + 1
-            if val != 0:
-                print "Grupa "+str(group)+" Osoby: "+str(val)
 
 
 
@@ -223,24 +222,42 @@ class Group_divide(QtGui.QWidget):
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # init widgets
-        view = QTreeView()
+        view = ex8.ui8.treeView
         view.setSelectionBehavior(QAbstractItemView.SelectRows)
         model = QStandardItemModel()
-        model.setHorizontalHeaderLabels(['col1', 'col2', 'col3'])
+        model.setHorizontalHeaderLabels(header)
         view.setModel(model)
         view.setUniformRowHeights(True)
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # populate data
-        for i in range(3):
-            parent1 = QStandardItem('Family {}. Some long status text for sp'.format(i))
-            for j in range(3):
-                child1 = QStandardItem('Child {}'.format(i * 3 + j))
-                child2 = QStandardItem('row: {}, col: {}'.format(i, j + 1))
-                child3 = QStandardItem('row: {}, col: {}'.format(i, j + 2))
+
+        groups_to_create = int(self.ui.lineEdit.text())
+        participants_in_group = int(self.ui.lineEdit_2.text())
+        divider = 0
+        group = 1
+        parent1 = QStandardItem('Grupa {}'.format(group))
+        for i, val in enumerate(nums):
+
+            if divider == participants_in_group:
+                divider = 0
+                group = group + 1
+                parent1 = QStandardItem('Grupa {}'.format(group))
+            divider = divider + 1
+            if val != 0:
+                print "Grupa " + str(group) + " Osoby: " + str(val)
+                self.tableindex_id = tablemodel.index (val,1)
+                self.tableindex_surname = tablemodel.index (val,2)
+                child1 = QStandardItem(str(val)+' '+str(tablemodel.data(self.tableindex_id, self.tableindex_id).toString())+" "+str(tablemodel.data(self.tableindex_surname, self.tableindex_id).toString()))
+                child2 = QStandardItem('')
+                child3 = QStandardItem('row: {}, col: {}')
                 parent1.appendRow([child1, child2, child3])
-            model.appendRow(parent1)
-            # span container columns
-            view.setFirstColumnSpanned(i, view.rootIndex(), True)
+
+
+                model.appendRow(parent1)
+                # span container columns
+                view.setFirstColumnSpanned(i, view.rootIndex(), True)
+
+
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # expand third container
         index = model.indexFromItem(parent1)
@@ -279,6 +296,8 @@ class MainMenu(QtGui.QWidget):
         QtCore.QObject.connect(self.ui2.pushButton_6 , QtCore.SIGNAL("clicked()"), self.open_participant_add_window)
         QtCore.QObject.connect(self.ui2.pushButton_5 , QtCore.SIGNAL("clicked()"), self.open_participant_list_window)
         QtCore.QObject.connect(self.ui2.pushButton_7 , QtCore.SIGNAL("clicked()"), self.open_group_divide_window)
+        QtCore.QObject.connect(self.ui2.pushButton_4 , QtCore.SIGNAL("clicked()"), self.open_divided_view)
+        QtCore.QObject.connect(self.ui2.pushButton_3 , QtCore.SIGNAL("clicked()"), self.save_data)
     def open_participant_add_window(self):
         self.participant_add_form = Participant_add()
         self.participant_add_form.show()
@@ -293,6 +312,30 @@ class MainMenu(QtGui.QWidget):
         # participant_list_form = Participant_list()
         group_divide_form.show()
 
+    def open_divided_view(self):
+        divided_view_form = ex8
+        # participant_list_form = Participant_list()
+        divided_view_form.show()
+
+    def save_data (self):
+        root = ET.Element("mainconfig")
+        doc = ET.SubElement(root, "configdata")
+
+        model = ex3.ui3.tableView.model()
+        # data = []
+
+        for row in range(model.rowCount(None)):
+            # data.append([])
+
+            index = model.index(row, 1)
+
+            # We suppose data are strings
+            # data[row].append(str(model.data(index).toString()))
+            ET.SubElement(doc, "participant_" + str(row), name="" + str(row)).text = str(model.data(index).toString())
+
+        tree = ET.ElementTree(root)
+        tree.write("participants.xml")
+
 
 
 
@@ -303,7 +346,7 @@ if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     #ex = MainMenu()
     #ex.show()
-    global ex2, ex3, ex4
+    global ex2, ex3, ex4, ex8
     ex2 = Group_divide()
     #ex2.show()
     ex3 = Participant_list()
@@ -312,7 +355,7 @@ if __name__ == "__main__":
     ex4.show()
     #ex5 = Participant_add()
     #ex5.show()
-
+    ex8 = Divided_view()
 
     #myapp = Participant_add()
     #myapp.show()
