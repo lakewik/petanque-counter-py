@@ -47,10 +47,10 @@ class MyTableModel(QAbstractTableModel):
 
     def data(self, index, role):
         if not index.isValid():
-            return QVariant()
+            return QVariant().toPyObject()
         elif role != Qt.DisplayRole:
-            return QVariant()
-        return QVariant(self.arraydata[index.row()][index.column()])
+            return QVariant().toPyObject()
+        return QVariant(self.arraydata[index.row()][index.column()]).toPyObject()
 
     def setData(self, index, value, role):
         pass         # not sure what to put here
@@ -120,7 +120,7 @@ class Participant_add(QtGui.QWidget):
             index = model.index(row, 2)
             # We suppose data are strings
             # data[row].append(str(model.data(index).toString()))
-            ET.SubElement(doc, "gpio_name_" + str(row), name="" + str(row) + str(model.data( index, None)))
+            ET.SubElement(doc, "gpio_name_" + str(row), name="" + str(row) + str(model.data( index, Qt.DisplayRole)))
 
         tree = ET.ElementTree(root)
         tree.write("participants.xml")
@@ -245,11 +245,11 @@ class Group_divide(QtGui.QWidget):
             divider = divider + 1
             if val != 0:
                 print "Grupa " + str(group) + " Osoby: " + str(val)
-                self.tableindex_id = tablemodel.index (val,1)
-                self.tableindex_surname = tablemodel.index (val,2)
-                child1 = QStandardItem(str(val)+' '+str(tablemodel.data(self.tableindex_id, self.tableindex_id).toString())+" "+str(tablemodel.data(self.tableindex_surname, self.tableindex_id).toString()))
-                child2 = QStandardItem('')
-                child3 = QStandardItem('row: {}, col: {}')
+                self.tableindex_id = tablemodel.index (val-1,1)
+                self.tableindex_surname = tablemodel.index (val-1,2)
+                child1 = QStandardItem(str(val)+' '+" ")
+                child2 = QStandardItem(str(tablemodel.data(self.tableindex_id,  Qt.DisplayRole)))
+                child3 = QStandardItem(str(tablemodel.data(self.tableindex_surname,  Qt.DisplayRole)))
                 parent1.appendRow([child1, child2, child3])
 
 
@@ -331,7 +331,7 @@ class MainMenu(QtGui.QWidget):
 
             # We suppose data are strings
             # data[row].append(str(model.data(index).toString()))
-            ET.SubElement(doc, "participant_" + str(row), name="" + str(row)).text = str(model.data(index).toString())
+            ET.SubElement(doc, "participant_" + str(row), name="" + str(row)).text = str(model.data(index, Qt.DisplayRole))
 
         tree = ET.ElementTree(root)
         tree.write("participants.xml")
@@ -359,4 +359,4 @@ if __name__ == "__main__":
 
     #myapp = Participant_add()
     #myapp.show()
-    sys.exit(app.exec_())
+sys.exit(app.exec_())
