@@ -5,6 +5,8 @@ import sys
 from PyQt4 import QtCore, QtGui
 import random
 import operator
+import string
+
 from PyQt4.QtCore import QAbstractTableModel, SIGNAL
 from PyQt4.QtCore import QVariant
 from PyQt4.QtCore import Qt
@@ -15,7 +17,7 @@ from PyQt4.QtGui import QItemSelectionModel
 from PyQt4.QtGui import QStandardItem
 from PyQt4.QtGui import QStandardItemModel
 from PyQt4.QtGui import QTreeView
-
+from lxml import etree
 from participant_add import Participant_add_ui
 from menu import MainMenu_ui
 from team_add import Team_add_ui
@@ -37,6 +39,8 @@ class MyTableModel(QAbstractTableModel):
         self.arraydata = datain
         self.headerdata = headerdata
 
+
+
     def rowCount(self, parent):
         return len(self.arraydata)
 
@@ -54,6 +58,10 @@ class MyTableModel(QAbstractTableModel):
 
     def setData(self, index, value, role):
         pass         # not sure what to put here
+
+    def setItem(self, index, value):
+        self.arraydata[index.row()][index.column()] = value
+        return True
 
     def headerData(self, col, orientation, role):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
@@ -81,7 +89,6 @@ class Participant_add(QtGui.QWidget):
         QtCore.QObject.connect(self.ui4.buttonBox, QtCore.SIGNAL("accepted()"), self.participant_add)
         participant_list_form = ex3
         tv = participant_list_form.ui3.tableView
-
     def participant_add(self):
 
 
@@ -106,11 +113,13 @@ class Participant_add(QtGui.QWidget):
         group_divide_form.ui.label_3.setText(
             "<html><head/><body><p><span style=\" font-size:14pt; font-weight:600;\">fd" + partic_number + "</span></p></body></html>")
 
-    def save_participants_list(self):
-        root = ET.Element("mainconfig")
-        doc = ET.SubElement(root, "configdata")
+    def save_participants_list (self):
+        root = ET.Element("participants")
+        doc = ET.SubElement(root, "list")
+        i = 0
 
         #model = MyTableModel(tabledata, header, self)
+        #global model
         model = ex3.ui3.tableView.model()
         # data = []
         rowcount = model.rowCount(None)
@@ -118,12 +127,80 @@ class Participant_add(QtGui.QWidget):
             # data.append([])
 
             index = model.index(row, 2)
+            index2 = model.index(row, 1)
             # We suppose data are strings
             # data[row].append(str(model.data(index).toString()))
-            ET.SubElement(doc, "gpio_name_" + str(row), name="" + str(row) + str(model.data( index, Qt.DisplayRole)))
-
+            ET.SubElement(doc, "participant_surname" , name="" + str(row) ).text = str(model.data( index, Qt.DisplayRole))
+            ET.SubElement(doc, "participant_name" , name="" + str(row) ).text = str(model.data( index2, Qt.DisplayRole))
+            row = row + 1
         tree = ET.ElementTree(root)
         tree.write("participants.xml")
+
+
+
+    def initialize_participants_table (self):
+        i = 0
+        model = MyTableModel(tabledata, header, ex3.ui3.tableView)
+        try:
+
+            et = etree.parse("participants.xml")
+            # partiter = et.xpath("//participants/list")
+            # for list in partiter:
+
+            for tags in et.iter('participant_surname'):
+                tabledata.append([i+1, "","", ""])
+                index2 = model.index(i, 2)
+                model.setItem(index2, str(tags.text))
+                i = i + 1
+
+            i = 0
+
+            for tags in et.iter('participant_name'):
+                index = model.index(i, 1)
+
+                model.setItem(index, str(tags.text))
+                i = i + 1
+                print tags.text
+            tv.setModel(model)
+
+        except:
+            print "Unspefified error"
+            #print self.get_parametr_from_xml ("gpio_name_1", "participants.xml")
+
+
+
+
+    def get_parametr_from_xml (self, parametr, filename):
+
+        # value = [10]
+        value = [0]
+        # value[0] = [0]
+
+
+        et = etree.parse(filename)
+        value[0] = str(et.xpath("/participants/list/" + str(parametr) + "/text()"))
+        value[0] = string.replace(value[0], ']', '')
+        value[0] = string.replace(value[0], "'", '')
+
+        return string.replace(value[0], '[', '')
+
+    def initialize_data(self):
+        i = 0
+        # value
+        # document = ElementTree.parse('uploader_config.xml')
+        # Open XML document using minidom parser
+        # DOMTree = minidom.parse('uploader_config.xml')
+
+        # pobieramy elementy struktury dokumentu XML
+        # cNodes = DOMTree.childNodes
+        # for i in cNodes[0].getElementsByTagName("configdata"):
+        # nazwa taga
+        # return i.getElementsByTagName(parametr)[0].nodeName
+
+
+        # for main_tag in document.findall('mainconfig/configdata'):
+        # testname = main_tag.find('.//'+str(parametr))
+        # return 'TestName:'
 
 class Team_add(QtGui.QWidget):
     def __init__(self, parent=None):
@@ -169,6 +246,7 @@ class Group_divide(QtGui.QWidget):
         in_group_ready = self.get_participants_number()/divided_to
         self.ui.lineEdit_2.setText(str(in_group_ready))
         #print in_group_ready
+
 
     def get_participants_number(self):
         participant_list_form = ex3
@@ -298,6 +376,10 @@ class MainMenu(QtGui.QWidget):
         QtCore.QObject.connect(self.ui2.pushButton_7 , QtCore.SIGNAL("clicked()"), self.open_group_divide_window)
         QtCore.QObject.connect(self.ui2.pushButton_4 , QtCore.SIGNAL("clicked()"), self.open_divided_view)
         QtCore.QObject.connect(self.ui2.pushButton_3 , QtCore.SIGNAL("clicked()"), self.save_data)
+
+        padclass = Participant_add()
+        padclass.initialize_participants_table()
+
     def open_participant_add_window(self):
         self.participant_add_form = Participant_add()
         self.participant_add_form.show()
@@ -318,23 +400,8 @@ class MainMenu(QtGui.QWidget):
         divided_view_form.show()
 
     def save_data (self):
-        root = ET.Element("mainconfig")
-        doc = ET.SubElement(root, "configdata")
-
-        model = ex3.ui3.tableView.model()
-        # data = []
-
-        for row in range(model.rowCount(None)):
-            # data.append([])
-
-            index = model.index(row, 1)
-
-            # We suppose data are strings
-            # data[row].append(str(model.data(index).toString()))
-            ET.SubElement(doc, "participant_" + str(row), name="" + str(row)).text = str(model.data(index, Qt.DisplayRole))
-
-        tree = ET.ElementTree(root)
-        tree.write("participants.xml")
+        partaddclass = Participant_add()
+        partaddclass.save_participants_list()
 
 
 
